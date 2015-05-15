@@ -48,6 +48,7 @@ typedef struct {
     int blocked_domain_len;
     char **non_blocked_domain;
     int non_blocked_domain_len;
+    bool verbose;
 } server_cfg_t;
 
 typedef struct {
