@@ -45,8 +45,9 @@ static void on_read_dns_query(uv_udp_t *handle, ssize_t nread, const uv_buf_t *b
     if (nread < 0) {
         log_error("error read client dns query. %s", uv_strerror((int) nread));
     } else if (nread > 0) {
-        server_cfg_t *cfg = ((server_ctx_t *) handle->loop->data)->cfg;
-        session_setup(handle, addr, buf->base, nread, cfg->proxies, cfg->proxies_count, cfg->query_timeout);
+        server_ctx_t * ctx = handle->loop->data;
+        server_cfg_t *cfg = ctx->cfg;
+        session_setup(ctx, addr, buf->base, nread, cfg->proxies, cfg->proxies_count, cfg->query_timeout);
     }
     if (buf->base)
         xfree(buf->base);
