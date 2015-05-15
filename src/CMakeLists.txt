@@ -1,3 +1,6 @@
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -lresolv)
-add_executable(gdns main.c server.c session.c task.c iputility.c common.c)
-target_link_libraries(gdns ${LIBUV_LIBRARIES})
+
+find_package(LibConfig REQUIRED)
+include_directories(${LIBCONFIG_INCLUDE_DIR})
+add_executable(gdns main.c server.c session.c task.c iputility.c common.c config.c)
+target_link_libraries(gdns ${LIBUV_LIBRARIES} ${LIBCONFIG_LIBRARY})
