@@ -29,7 +29,7 @@ namespace TestIPUtility {
             subnet_list_free(&list);
         }
 
-        static boolean is_in_list(const char *ip) {
+        static bool is_in_list(const char *ip) {
             struct in_addr addr;
             inet_aton(ip, &addr);
             return ip_in_subnet_list(&list, &addr);
