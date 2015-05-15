@@ -34,8 +34,10 @@ typedef struct {
     struct sockaddr *addr;
     bool internal;
     bool tcp;
-    uint64_t expected_response_time;
-    uint64_t expected_fake_response_time;
+    bool enabled;
+    int64_t expected_response_time;
+    int64_t expected_fake_response_time;
+    void *data;
 } upstream_proxy_t;
 
 typedef struct {
@@ -72,7 +74,7 @@ typedef struct {
     query_task_t **tasks;
     int task_count;
     int query_timeout;
-    uv_timer_t * timer;
+    uv_timer_t *timer;
     server_ctx_t *server_ctx;
     double max_confidence;
     char *confident_response;
@@ -80,15 +82,16 @@ typedef struct {
     session_state_t state;
 } session_ctx_t;
 
-typedef void(*task_cb)(query_task_t *task, char *response, ssize_t len, uint64_t response_time);
-typedef void(*task_close_cb)(query_task_t * task);
+typedef void(*task_cb)(query_task_t *task, char *response, ssize_t len, int64_t response_time);
+
+typedef void(*task_close_cb)(query_task_t *task);
 
 typedef enum {
     TASK_INIT,
     TASK_RUNING,
     TASK_DONE,
     TASK_ERROR,
-    TASK_CLOSE
+    TASK_MULTI_RESULT
 } query_task_state_t;
 
 struct query_task_t {
@@ -100,7 +103,7 @@ struct query_task_t {
     uint64_t start_time;
     uv_handle_t *handle;
     task_close_cb close_cb;
-    void * data;
+    void *data;
 };
 
 /**

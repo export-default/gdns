@@ -1,6 +1,5 @@
 #include <string.h>
 #include "task.h"
-#include "common.h"
 
 static void run_udp_task(uv_loop_t *loop, query_task_t *task);
 
@@ -19,7 +18,7 @@ static void on_write_tcp_query(uv_write_t *req, int status);
 
 static void on_read_tcp_response(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
 
-static uint64_t time_diff(uint64_t start_time);
+static int64_t time_diff(uint64_t start_time);
 
 static void on_close(uv_handle_t *handle);
 
@@ -31,7 +30,7 @@ void task_init(query_task_t *task, upstream_proxy_t *proxy, char *msg, ssize_t l
         task->msg = xmalloc(len + 2);
         *((uint16_t *) task->msg) = htons(len);
         memcpy(task->msg + 2, msg, len);
-        task->msg_len = len+2;
+        task->msg_len = len + 2;
     } else {
         task->msg = xmalloc(len);
         memcpy(task->msg, msg, len);
@@ -53,11 +52,6 @@ void task_run(uv_loop_t *loop, query_task_t *task, task_cb cb) {
 
 void task_close(query_task_t *task, task_close_cb close_cb) {
     task->close_cb = close_cb;
-    if (task->proxy->tcp) {
-        uv_read_stop((uv_stream_t *) task->handle);
-    } else {
-        uv_udp_recv_stop((uv_udp_t *) task->handle);
-    }
     uv_close(task->handle, on_close);
 }
 
@@ -110,8 +104,11 @@ static query_task_t *get_task_from_handle(uv_handle_t *handle) {
 
 
 static void on_send_udp_query(uv_udp_send_t *req, int status) {
+    query_task_t *task = get_task_from_handle((uv_handle_t *) req->handle);
     if (status != 0) {
         log_error("Error on forward udp query: %s", uv_strerror(status));
+        task->state = TASK_ERROR;
+        task->cb(task, NULL, 0, 0);
     } else {
         uv_udp_recv_start(req->handle, alloc_cb, on_recv_udp_response);
     }
@@ -126,7 +123,13 @@ static void on_recv_udp_response(uv_udp_t *handle, ssize_t nread, const uv_buf_t
         task->state = TASK_ERROR;
         task->cb(task, NULL, 0, 0);
     } else if (nread > 0) {
-        task->state = TASK_DONE;
+        if (task->state == TASK_RUNING) {
+            task->state = TASK_DONE;
+        } else if (task->state == TASK_DONE || task->state == TASK_MULTI_RESULT) {
+            task->state = TASK_MULTI_RESULT;
+        } else {
+            UNREACHABLE();
+        }
         task->cb(task, buf->base, nread, time_diff(task->start_time));
     }
 
@@ -153,8 +156,15 @@ static void on_read_tcp_response(uv_stream_t *stream, ssize_t nread, const uv_bu
         task->state = TASK_ERROR;
         task->cb(task, NULL, 0, 0);
     } else if (nread > 0) {
-        task->state = TASK_DONE;
-        task->cb(task, buf->base+2, nread-2, time_diff(task->start_time)); // tcp response add 2 bytes data length in header.
+        if (task->state == TASK_RUNING) {
+            task->state = TASK_DONE;
+        } else if (task->state == TASK_DONE || task->state == TASK_MULTI_RESULT) {
+            task->state = TASK_MULTI_RESULT;
+        } else {
+            UNREACHABLE();
+        }
+        task->cb(task, buf->base + 2, nread - 2,
+                 time_diff(task->start_time)); // tcp response add 2 bytes data length in header.
         uv_read_stop(stream);
     }
 
@@ -171,6 +181,6 @@ static void on_close(uv_handle_t *handle) {
     }
 }
 
-static uint64_t time_diff(uint64_t start_time) {
-    return (uint64_t) ((uv_hrtime() - start_time) / 1e6);
+static int64_t time_diff(uint64_t start_time) {
+    return (int64_t) ((uv_hrtime() - start_time) / 1e6);
 }

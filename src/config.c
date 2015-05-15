@@ -136,8 +136,6 @@ server_cfg_t *read_server_cfg(char *filepath, char *bind_ip, int port, bool verb
         server_cfg->proxies[i].addr = (struct sockaddr *) addr;
         server_cfg->proxies[i].internal = (bool) internal;
         server_cfg->proxies[i].tcp = (bool) tcp;
-        server_cfg->proxies[i].expected_response_time = 90;
-        server_cfg->proxies[i].expected_fake_response_time = 30;
     }
 
     settings = config_lookup(&config, "domains.blocked");
@@ -150,7 +148,7 @@ server_cfg_t *read_server_cfg(char *filepath, char *bind_ip, int port, bool verb
     server_cfg->blocked_domain_len = len;
     server_cfg->blocked_domain = xmalloc(sizeof(char *) * len);
     for (i = 0; i < len; ++i) {
-        const char *domain = config_setting_get_string_elem(settings, 0);
+        const char *domain = config_setting_get_string_elem(settings, i);
         server_cfg->blocked_domain[i] = xmalloc(strlen(domain) + 1);
         strcpy(server_cfg->blocked_domain[i], domain);
     }
@@ -165,7 +163,7 @@ server_cfg_t *read_server_cfg(char *filepath, char *bind_ip, int port, bool verb
     server_cfg->non_blocked_domain_len = len;
     server_cfg->non_blocked_domain = xmalloc(sizeof(char *) * len);
     for (i = 0; i < len; ++i) {
-        const char *domain = config_setting_get_string_elem(settings, 0);
+        const char *domain = config_setting_get_string_elem(settings, i);
         server_cfg->non_blocked_domain[i] = xmalloc(strlen(domain) + 1);
         strcpy(server_cfg->non_blocked_domain[i], domain);
     }

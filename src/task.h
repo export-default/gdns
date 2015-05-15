@@ -1,5 +1,5 @@
-#ifndef GDNS_PROXY_H
-#define GDNS_PROXY_H
+#ifndef GDNS_TASK_H
+#define GDNS_TASK_H
 
 #include "common.h"
 

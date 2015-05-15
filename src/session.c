@@ -9,7 +9,7 @@
 
 static void session_close(session_ctx_t *ctx);
 
-static void on_task_done(query_task_t *task, char *response, ssize_t len, uint64_t response_time);
+static void on_task_done(query_task_t *task, char *response, ssize_t len, int64_t response_time);
 
 static void on_query_timeout(uv_timer_t *handle);
 
@@ -17,7 +17,7 @@ static void write_response(session_ctx_t *ctx, char *response, ssize_t len);
 
 static void on_close(uv_handle_t *handle);
 
-static int forward_action(query_task_t *task, char *response, ssize_t len, uint64_t response_time);
+static int forward_action(query_task_t *task, char *response, ssize_t len, int64_t response_time);
 
 static void on_task_close(query_task_t *task);
 
@@ -96,7 +96,7 @@ static void on_query_timeout(uv_timer_t *handle) {
 
 }
 
-static void on_task_done(query_task_t *task, char *response, ssize_t len, uint64_t response_time) {
+static void on_task_done(query_task_t *task, char *response, ssize_t len, int64_t response_time) {
     if (task->state == TASK_DONE) {
         session_ctx_t *ctx = task->data;
         if (ctx->state == SESSION_RUNNING && forward_action(task, response, len, response_time) == 1) {
@@ -141,7 +141,7 @@ static void on_timer_close(uv_handle_t *handle) {
 
 
 // 1 forward. 0 ignore.
-static int forward_action(query_task_t *task, char *response, ssize_t len, uint64_t response_time) {
+static int forward_action(query_task_t *task, char *response, ssize_t len, int64_t response_time) {
 
     upstream_proxy_t *proxy = task->proxy;
     session_ctx_t *ctx = task->data;
@@ -151,7 +151,9 @@ static int forward_action(query_task_t *task, char *response, ssize_t len, uint6
     int rr_count, i;
 
     // 1. forward tcp result.
-    //todo tcp query
+    if(task->proxy->tcp){
+        return 1;
+    }
 
     ns_initparse(response, len, &msg);
     rr_count = ns_msg_count(msg, ns_s_an);
@@ -185,7 +187,7 @@ static int forward_action(query_task_t *task, char *response, ssize_t len, uint6
         }
 
         // 5. for external ip. calc result confidence.
-        double confidence = (double) (response_time - proxy->expected_fake_response_time) /
+        double confidence = ( 1.0 * response_time - proxy->expected_fake_response_time) /
                             (proxy->expected_response_time - proxy->expected_fake_response_time);
 
         // if we are confident enough.
