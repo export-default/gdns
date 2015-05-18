@@ -1,0 +1,3 @@
+[submodule "vendor/uvpp"]
+	path = vendor/uvpp
+	url = git@github.com:ryanzz/uvpp.git
